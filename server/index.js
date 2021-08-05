@@ -9,6 +9,10 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 const httpServer = createServer(app);
+const data = {};
+
+
+httpServer.listen(3002, () => console.log(`Socket.io test running on port 3002`));
 
 const io = new Server(httpServer, {
   cors: true,
@@ -17,20 +21,21 @@ const io = new Server(httpServer, {
 
 io.on('connection', (socket) => {
   console.log(socket.id);
-
-  socket.on('join_room', (roomName) => {
-    socket.join(roomName); // creates room with the name
-    console.log('User Joined Room:', roomName);
+  socket.on('join_room', (loginInfo) => {
+    socket.join(loginInfo.room); // creates room with the name
+    console.log(`${loginInfo.user} Joined Room:`, loginInfo.room);
   });
 
-  socket.on('send_message', (data) => {
-    console.log("data =", data);
-    socket.to(data.room).emit('receive_message', data.content);
+  socket.on('send_message', (res) => {
+    if(data.hasOwnProperty(res.room)){
+      data[res.room].push(res.content);
+    } else {
+      data[res.room] = [res.content];
+    }
+    socket.to(res.room).emit('receive_message', data[res.room]);
   });
 
   socket.on('disconnect', () => {
     console.log('USER DISCONNECTED')
   });
 });
-
-httpServer.listen(3002, () => console.log(`Socket.io test running on port 3002`))
